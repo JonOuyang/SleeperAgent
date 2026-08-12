@@ -31,12 +31,14 @@ PLAN_FILE="$CACHE_DIR/devices.plan"
 RESTORE_FILE="$CACHE_DIR/devices.restore"
 RESTORE_COLOR="${SLEEPMODE_RESTORE_COLOR:-87CEEB}"  # sky blue
 
-# Seconds to wait after wake before writing any RGB. An RGB-capable keyboard
-# receives lighting writes on the same HID device that reports your keystrokes,
-# so writing to it during the very keypress that woke the display can drop the
-# key-release event and leave that key repeating forever. Waiting until the
-# keypress is over avoids the collision. Set to 0 to disable the delay.
-SETTLE="${SLEEPMODE_SETTLE:-3}"
+# Seconds to wait after wake before writing any RGB.
+#
+# This was added on a theory that lighting writes to an RGB keyboard — which
+# arrive on the same HID device that reports keystrokes — could disturb input.
+# Measured with kbwatch.py and it does NOT: the full save/blackout/restore
+# sequence produced zero stray key events. Defaults to 0 (no delay) because the
+# theory didn't hold; the knob remains for anyone who suspects otherwise.
+SETTLE="${SLEEPMODE_SETTLE:-0}"
 
 log() { printf '%s  %s\n' "$(date +%H:%M:%S)" "$*"; }
 have_rgb() { [[ $DO_RGB -eq 1 ]] && command -v openrgb >/dev/null 2>&1; }

@@ -80,7 +80,7 @@ sleepmode --rescan     # rebuild the cached RGB device plan
 |---|---|---|
 | `SLEEPMODE_RESTORE_COLOR` | `87CEEB` | Colour for devices that can't be restored from a profile |
 | `SLEEPMODE_NO_UNLOCK` | unset | Set to `1` to leave lock-screen settings alone |
-| `SLEEPMODE_SETTLE` | `3` | Seconds to wait after wake before writing RGB (see below); `0` disables |
+| `SLEEPMODE_SETTLE` | `0` | Seconds to wait after wake before writing RGB |
 
 Run `./verify.sh` to check every building block without blanking the screen.
 
@@ -100,10 +100,25 @@ A few things that are easy to get wrong:
   Those devices get re-lit explicitly instead.
 - **OpenRGB exits 0 even when a mode change doesn't apply**, and its
   `--list-devices` active-mode readback is unreliable. Confirm with your eyes.
-- **An RGB keyboard takes lighting writes on the same HID device that reports
-  your keystrokes.** Writing to it during the keypress that woke the display can
-  swallow the key-*release* and leave that key repeating forever. Hence
-  `SLEEPMODE_SETTLE` — RGB writes are held back until the keypress is over.
+## Debugging a stuck / repeating key after wake
+
+Some keyboards spam a keycode after a display wake. `kbwatch.py` reads the
+kernel's evdev stream directly — *below* the compositor — which tells you where
+the fault is:
+
+```bash
+./kbwatch.py --out /tmp/kb.log &   # then use sleepmode as normal
+```
+
+- Events **appear** in the log → the keyboard really is sending them
+  (firmware/kernel). Not something this script can fix.
+- Key visibly spams but the log stays **empty** → the device is innocent and the
+  compositor is synthesising repeats from a key-release it never saw.
+
+On the reference machine, RGB writes were measured and ruled out as a cause: the
+full save-profile → blackout → restore sequence produced **zero** stray key
+events with hands off the keyboard. USB autosuspend was also ruled out
+(`power/control` was already `on`). `SLEEPMODE_SETTLE` therefore defaults to `0`.
 - **Cost is per OpenRGB invocation, not per device** (each one re-scans all
   hardware, ~2.8s). Chaining every device into a single call took 2.75s versus
   ~12.5s looping. The screen is blanked before the RGB work, since it lands in
