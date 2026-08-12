@@ -31,6 +31,13 @@ PLAN_FILE="$CACHE_DIR/devices.plan"
 RESTORE_FILE="$CACHE_DIR/devices.restore"
 RESTORE_COLOR="${SLEEPMODE_RESTORE_COLOR:-87CEEB}"  # sky blue
 
+# Seconds to wait after wake before writing any RGB. An RGB-capable keyboard
+# receives lighting writes on the same HID device that reports your keystrokes,
+# so writing to it during the very keypress that woke the display can drop the
+# key-release event and leave that key repeating forever. Waiting until the
+# keypress is over avoids the collision. Set to 0 to disable the delay.
+SETTLE="${SLEEPMODE_SETTLE:-3}"
+
 log() { printf '%s  %s\n' "$(date +%H:%M:%S)" "$*"; }
 have_rgb() { [[ $DO_RGB -eq 1 ]] && command -v openrgb >/dev/null 2>&1; }
 
@@ -284,7 +291,12 @@ while display_is_off; do
   sleep 1
 done
 
-log "woke up — restoring"
+log "woke up"
+# See SETTLE above: don't touch the keyboard's HID device mid-keypress.
+if have_rgb && [[ "$SETTLE" != "0" ]]; then
+  sleep "$SETTLE"
+fi
+log "restoring"
 rgb_restore
 lock_restore
 keepawake_stop
